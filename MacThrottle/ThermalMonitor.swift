@@ -21,16 +21,6 @@ enum ThermalPressure: String, Codable {
         }
     }
 
-    var iconName: String {
-        switch self {
-        case .nominal: return "thermometer.low"
-        case .moderate: return "thermometer.medium"
-        case .heavy: return "thermometer.high"
-        case .trapping, .sleeping: return "thermometer.sun.fill"
-        case .unknown: return "thermometer"
-        }
-    }
-
     var isThrottling: Bool {
         switch self {
         case .heavy, .trapping, .sleeping:
