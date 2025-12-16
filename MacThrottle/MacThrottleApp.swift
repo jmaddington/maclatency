@@ -41,8 +41,10 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
 
-            Link("View on GitHub", destination: URL(string: "https://github.com/angristan/MacThrottle")!)
-                .font(.caption)
+            if let url = URL(string: "https://github.com/angristan/MacThrottle") {
+                Link("View on GitHub", destination: url)
+                    .font(.caption)
+            }
         }
         .padding(32)
         .frame(width: 300)
@@ -76,10 +78,13 @@ struct MenuContent: View {
 
     private var helperNeedsUpdate: Bool {
         guard monitor.daemonRunning else { return false }
-        guard let installed = try? String(contentsOfFile: "/usr/local/bin/mac-throttle-thermal-monitor", encoding: .utf8) else {
+        let path = "/usr/local/bin/mac-throttle-thermal-monitor"
+        guard let installed = try? String(contentsOfFile: path, encoding: .utf8) else {
             return false
         }
-        return installed.trimmingCharacters(in: .whitespacesAndNewlines) != HelperInstaller.monitorScript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let installedTrimmed = installed.trimmingCharacters(in: .whitespacesAndNewlines)
+        let expectedTrimmed = HelperInstaller.monitorScript.trimmingCharacters(in: .whitespacesAndNewlines)
+        return installedTrimmed != expectedTrimmed
     }
 
     var body: some View {
@@ -177,7 +182,8 @@ struct MenuContent: View {
             return
         }
 
-        let unloadCommand = update ? "launchctl unload /Library/LaunchDaemons/com.macthrottle.thermal-monitor.plist 2>/dev/null; " : ""
+        let plistFile = "/Library/LaunchDaemons/com.macthrottle.thermal-monitor.plist"
+        let unloadCommand = update ? "launchctl unload \(plistFile) 2>/dev/null; " : ""
 
         let installCommands = """
             \(unloadCommand)cp '\(scriptPath)' /usr/local/bin/mac-throttle-thermal-monitor && \

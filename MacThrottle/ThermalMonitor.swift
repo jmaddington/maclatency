@@ -125,7 +125,8 @@ final class ThermalMonitor {
             }
 
             // Check for recovery notification
-            if notifyOnRecovery && previousPressure.isThrottling && !newPressure.isThrottling && newPressure != .unknown {
+            let recovered = previousPressure.isThrottling && !newPressure.isThrottling
+            if notifyOnRecovery && recovered && newPressure != .unknown {
                 sendRecoveryNotification()
             }
 
