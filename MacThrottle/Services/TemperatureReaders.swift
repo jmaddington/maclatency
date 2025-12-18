@@ -44,7 +44,7 @@ private extension FourCharCode {
 }
 
 final class SMCReader {
-    static let shared = SMCReader()
+    nonisolated(unsafe) static let shared = SMCReader()
 
     private var conn: io_connect_t = 0
     private var isConnected = false
@@ -164,7 +164,7 @@ final class HIDTemperatureReader {
     private let kIOHIDEventTypeTemperature: Int64 = 15
     private let kIOHIDEventFieldTemperatureLevel: UInt32 = 0xf0000
 
-    static let shared = HIDTemperatureReader()
+    nonisolated(unsafe) static let shared = HIDTemperatureReader()
 
     private init() {}
 

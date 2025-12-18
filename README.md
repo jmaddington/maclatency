@@ -102,4 +102,4 @@ The displayed temperature is the maximum reading across all available CPU sensor
 
 ## Requirements
 
-- macOS 14.0+
+- macOS 26.0+ (Tahoe)

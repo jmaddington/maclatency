@@ -4,7 +4,7 @@ import Foundation
 /// This provides the same 5-level granularity as `powermetrics -s thermal` without
 /// requiring root privileges or a helper daemon.
 final class ThermalPressureReader {
-    static let shared = ThermalPressureReader()
+    nonisolated(unsafe) static let shared = ThermalPressureReader()
 
     private var token: Int32 = 0
     private var isRegistered = false

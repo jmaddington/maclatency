@@ -1,7 +1,7 @@
 import SwiftUI
 
 private struct WidthPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }
@@ -195,10 +195,9 @@ struct HistoryGraphView: View {
                 let timeStr = timeAgo < 60 ? "\(timeAgo)s ago" : "\(timeAgo / 60)m ago"
                 Text("\(Int(temp))° • \(entry.pressure.displayName) • \(timeStr)")
                     .font(.system(size: 8, weight: .medium))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 3))
-                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 6))
                     .padding(4)
             }
         }

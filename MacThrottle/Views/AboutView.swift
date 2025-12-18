@@ -7,6 +7,7 @@ struct AboutView: View {
                 .resizable()
                 .frame(width: 128, height: 128)
                 .cornerRadius(24)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 24))
 
             Text("MacThrottle")
                 .font(.title)
@@ -24,6 +25,7 @@ struct AboutView: View {
             if let url = URL(string: "https://github.com/angristan/MacThrottle") {
                 Link("View on GitHub", destination: url)
                     .font(.caption)
+                    .glassEffect()
             }
         }
         .padding(32)
