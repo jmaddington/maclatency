@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/angristan/MacThrottle/compare/v1.0.0...v1.1.0) (2025-12-18)
+
+
+### Features
+
+* add cpu temperature monitoring and history tracking ([c356c75](https://github.com/angristan/MacThrottle/commit/c356c75b85f04a6da6f2f073042c159ed7a49304))
+
 # 1.0.0 (2025-12-16)
 
 
