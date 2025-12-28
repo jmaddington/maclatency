@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/angristan/MacThrottle/compare/v1.5.0...v1.5.1) (2025-12-28)
+
+
+### Bug Fixes
+
+* add macOS 15 backward compatibility for glassEffect ([#2](https://github.com/angristan/MacThrottle/issues/2)) ([6102d5c](https://github.com/angristan/MacThrottle/commit/6102d5c41b1719e0612b7a8449ac13613846893b))
+
 # [1.5.0](https://github.com/angristan/MacThrottle/compare/v1.4.1...v1.5.0) (2025-12-22)
 
 
