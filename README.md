@@ -1,6 +1,12 @@
 # MacThrottle
 
-A macOS menu bar app that monitors thermal pressure and alerts you when your Mac is being throttled.
+[![GitHub Release](https://img.shields.io/github/v/release/angristan/MacThrottle)](https://github.com/angristan/MacThrottle/releases)
+[![CI](https://github.com/angristan/MacThrottle/actions/workflows/ci.yml/badge.svg)](https://github.com/angristan/MacThrottle/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![macOS](https://img.shields.io/badge/macOS-15+-blue)](https://github.com/angristan/MacThrottle)
+[![Swift](https://img.shields.io/badge/Swift-6-orange)](https://swift.org)
+
+A lightweight macOS menu bar app that monitors thermal pressure and alerts you when your Mac is being throttled. No admin privileges required.
 
 ![screenshot](./assets/screenshot.png)
 
