@@ -288,12 +288,14 @@ final class HIDTemperatureReader {
     private typealias CopyServicesFunc = @convention(c) (IOHIDEventSystemClientRef) -> CFArray?
     private typealias CopyEventFunc = @convention(c) (IOHIDServiceClientRef, Int64, Int32, Int64) -> IOHIDEventRef?
     private typealias GetFloatValueFunc = @convention(c) (IOHIDEventRef, UInt32) -> Double
+    private typealias ReleaseFunc = @convention(c) (OpaquePointer) -> Void
 
     private var create: CreateFunc?
     private var setMatching: SetMatchingFunc?
     private var copyServices: CopyServicesFunc?
     private var copyEvent: CopyEventFunc?
     private var getFloatValue: GetFloatValueFunc?
+    private var release: ReleaseFunc?
     private var isInitialized = false
 
     private let kIOHIDEventTypeTemperature: Int64 = 15
@@ -314,22 +316,25 @@ final class HIDTemperatureReader {
         copyServices = unsafeBitCast(dlsym(handle, "IOHIDEventSystemClientCopyServices"), to: CopyServicesFunc?.self)
         copyEvent = unsafeBitCast(dlsym(handle, "IOHIDServiceClientCopyEvent"), to: CopyEventFunc?.self)
         getFloatValue = unsafeBitCast(dlsym(handle, "IOHIDEventGetFloatValue"), to: GetFloatValueFunc?.self)
+        release = unsafeBitCast(dlsym(handle, "CFRelease"), to: ReleaseFunc?.self)
     }
 
     /// Returns the maximum CPU die temperature (PMU tdie sensors)
     func readCPUTemperature() -> TemperatureReading? {
         ensureInitialized()
 
-        guard let create, let setMatching, let copyServices, let copyEvent, let getFloatValue else {
+        guard let create, let setMatching, let copyServices, let copyEvent, let getFloatValue, let release else {
             return nil
         }
 
         guard let client = create(kCFAllocatorDefault) else { return nil }
+        defer { release(client) }
 
         let matching: [String: Any] = ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 5]
         setMatching(client, matching as CFDictionary)
 
         guard let services = copyServices(client) else { return nil }
+        // services (CFArray) is managed by Swift ARC
 
         var maxTemp: Double = 0
         let count = CFArrayGetCount(services)
@@ -339,6 +344,7 @@ final class HIDTemperatureReader {
 
             if let event = copyEvent(service, kIOHIDEventTypeTemperature, 0, 0) {
                 let temp = getFloatValue(event, kIOHIDEventFieldTemperatureLevel)
+                release(event)
                 if temp > maxTemp && temp < 150 {
                     maxTemp = temp
                 }
