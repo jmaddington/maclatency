@@ -68,7 +68,7 @@ struct HistoryGraphView: View {
         return padding + (1.0 - CGFloat(normalized)) * (height - padding * 2)
     }
 
-    private func entryAt(x: CGFloat, width: CGFloat) -> HistoryEntry? {
+    private func entryAt(x: CGFloat, width: CGFloat) -> (entry: HistoryEntry, xPosition: CGFloat)? {
         guard history.count >= 2, let first = history.first else { return nil }
         let totalDuration = Date().timeIntervalSince(first.timestamp)
         guard totalDuration > 0 else { return nil }
@@ -76,8 +76,13 @@ struct HistoryGraphView: View {
         let fraction = x / width
         let targetTime = first.timestamp.addingTimeInterval(totalDuration * fraction)
 
-        // Find the last entry whose timestamp is <= targetTime (the segment we're in)
-        return history.last { $0.timestamp <= targetTime } ?? history.first
+        // Find the closest entry to the target time
+        guard let closest = history.min(by: {
+            abs($0.timestamp.timeIntervalSince(targetTime)) < abs($1.timestamp.timeIntervalSince(targetTime))
+        }) else { return nil }
+
+        let entryX = CGFloat(closest.timestamp.timeIntervalSince(first.timestamp) / totalDuration) * width
+        return (closest, entryX)
     }
 
     @State private var graphWidth: CGFloat = 220
@@ -223,16 +228,19 @@ struct HistoryGraphView: View {
             }
 
             // Hover indicator
-            if let location = hoverLocation, let entry = entryAt(x: location.x, width: size.width) {
+            if let location = hoverLocation, let result = entryAt(x: location.x, width: size.width) {
+                let entry = result.entry
+                let hoverX = result.xPosition
+
                 var linePath = Path()
-                linePath.move(to: CGPoint(x: location.x, y: 0))
-                linePath.addLine(to: CGPoint(x: location.x, y: size.height))
+                linePath.move(to: CGPoint(x: hoverX, y: 0))
+                linePath.addLine(to: CGPoint(x: hoverX, y: size.height))
                 context.stroke(linePath, with: .color(.primary.opacity(0.3)), lineWidth: 1)
 
                 // Temperature hover point
                 if let temp = entry.temperature {
                     let y = yPositionForTemperature(temp, height: size.height)
-                    let circle = Path(ellipseIn: CGRect(x: location.x - 4, y: y - 4, width: 8, height: 8))
+                    let circle = Path(ellipseIn: CGRect(x: hoverX - 4, y: y - 4, width: 8, height: 8))
                     context.fill(circle, with: .color(entry.pressure.color))
                     context.stroke(circle, with: .color(.primary), lineWidth: 1.5)
                 }
@@ -240,7 +248,7 @@ struct HistoryGraphView: View {
                 // Fan speed hover point (smaller, subtler)
                 if hasFanData, let fan = entry.fanSpeed {
                     let y = yPositionForFanSpeed(fan, height: size.height)
-                    let circle = Path(ellipseIn: CGRect(x: location.x - 3, y: y - 3, width: 6, height: 6))
+                    let circle = Path(ellipseIn: CGRect(x: hoverX - 3, y: y - 3, width: 6, height: 6))
                     context.fill(circle, with: .color(fanColor.opacity(0.8)))
                     context.stroke(circle, with: .color(.primary.opacity(0.6)), lineWidth: 1)
                 }
@@ -262,7 +270,8 @@ struct HistoryGraphView: View {
 
     @ViewBuilder
     private var tooltipView: some View {
-        if let location = hoverLocation, let entry = entryAt(x: location.x, width: graphWidth) {
+        if let location = hoverLocation, let result = entryAt(x: location.x, width: graphWidth) {
+            let entry = result.entry
             if let temp = entry.temperature {
                 let timeAgo = Int(Date().timeIntervalSince(entry.timestamp))
                 let timeStr = timeAgo < 60 ? "\(timeAgo)s ago" : "\(timeAgo / 60)m ago"
