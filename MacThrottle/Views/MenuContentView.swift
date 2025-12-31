@@ -225,7 +225,7 @@ struct MenuContentView: View {
                         monitor.toggleHostNotification(host)
                     } label: {
                         Image(systemName: host.notifyOnIssue ? "bell.fill" : "bell.slash")
-                            .foregroundStyle(host.notifyOnIssue ? .accentColor : .secondary)
+                            .foregroundStyle(host.notifyOnIssue ? Color.accentColor : .secondary)
                     }
                     .buttonStyle(.plain)
                     .help(host.notifyOnIssue ? "Notifications enabled" : "Notifications disabled")
@@ -324,3 +324,4 @@ struct MenuContentView: View {
         NSApp.activate(ignoringOtherApps: true)
     }
 }
+
