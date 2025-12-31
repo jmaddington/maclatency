@@ -141,6 +141,23 @@ struct MenuContentView: View {
                 Toggle("On Offline", isOn: $monitor.notifyOnOffline)
                 Toggle("On Recovery", isOn: $monitor.notifyOnRecovery)
                 Toggle("Sound", isOn: $monitor.notificationSound)
+
+                HStack {
+                    Text("Delay:")
+                    Spacer()
+                    Picker("", selection: $monitor.notificationDelaySeconds) {
+                        ForEach(LatencyMonitor.notificationDelayOptions, id: \.self) { delay in
+                            if delay == 0 {
+                                Text("Immediate").tag(delay)
+                            } else {
+                                Text("\(Int(delay))s").tag(delay)
+                            }
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(width: 90)
+                }
             }
             .controlSize(.small)
 

@@ -35,6 +35,8 @@ final class LatencyMonitor {
     private var timer: Timer?
     private var previousOverallStatus: LatencyStatus = .unknown
     private var previousHostStatuses: [UUID: LatencyStatus] = [:]  // Per-host status tracking
+    private var hostProblematicSince: [UUID: Date] = [:]  // When each host first became problematic
+    private var pendingNotifications: [UUID: LatencyStatus] = [:]  // Notifications waiting for delay
     private var isMonitoring = false
 
     // MARK: - User Settings (persisted to UserDefaults)
@@ -62,6 +64,13 @@ final class LatencyMonitor {
 
     var showLatencyInMenuBar: Bool = UserDefaults.standard.object(forKey: "showLatencyInMenuBar") as? Bool ?? true {
         didSet { UserDefaults.standard.set(showLatencyInMenuBar, forKey: "showLatencyInMenuBar") }
+    }
+
+    /// Delay in seconds before sending notification (0 = immediate)
+    static let notificationDelayOptions: [Double] = [0, 5, 10, 15, 30, 60]
+
+    var notificationDelaySeconds: Double = UserDefaults.standard.object(forKey: "notificationDelaySeconds") as? Double ?? 0 {
+        didSet { UserDefaults.standard.set(notificationDelaySeconds, forKey: "notificationDelaySeconds") }
     }
 
     // swiftlint:disable:next line_length
@@ -275,17 +284,35 @@ final class LatencyMonitor {
         let latencies = readings.compactMap(\.latencyMs)
         worstLatency = latencies.max()
 
-        // Handle per-host notifications
+        // Handle per-host notifications with delay tracking
+        let now = Date()
         for reading in readings {
             let previousStatus = previousHostStatuses[reading.hostId] ?? .unknown
-            if reading.status != previousStatus {
+
+            // Track when host becomes problematic
+            if reading.status.isProblematic && !previousStatus.isProblematic {
+                hostProblematicSince[reading.hostId] = now
+                pendingNotifications[reading.hostId] = reading.status
+            }
+            // Clear tracking when host recovers
+            else if !reading.status.isProblematic && previousStatus.isProblematic {
+                hostProblematicSince.removeValue(forKey: reading.hostId)
+                pendingNotifications.removeValue(forKey: reading.hostId)
+            }
+
+            // Check if delayed notification should fire
+            if let startTime = hostProblematicSince[reading.hostId],
+               let pendingStatus = pendingNotifications[reading.hostId],
+               now.timeIntervalSince(startTime) >= notificationDelaySeconds {
                 handleHostStatusChange(
                     hostId: reading.hostId,
                     hostLabel: reading.hostLabel,
-                    from: previousStatus,
-                    to: reading.status
+                    from: .unknown,  // Use unknown as "was not problematic"
+                    to: pendingStatus
                 )
+                pendingNotifications.removeValue(forKey: reading.hostId)
             }
+
             previousHostStatuses[reading.hostId] = reading.status
         }
 
