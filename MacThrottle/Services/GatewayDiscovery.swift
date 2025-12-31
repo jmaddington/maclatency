@@ -3,18 +3,24 @@
 
 import Foundation
 
+/// Gateway information including address and interface
+struct GatewayInfo: Hashable {
+    let address: String
+    let interface: String  // e.g., "en0", "en1"
+}
+
 /// Discovers active network gateways on the system
 final class GatewayDiscovery {
     nonisolated(unsafe) static let shared = GatewayDiscovery()
 
-    private var cachedGateways: [String] = []
+    private var cachedGateways: [GatewayInfo] = []
     private var lastDiscoveryTime: Date?
     private let cacheValiditySeconds: TimeInterval = 30  // Re-discover every 30s
 
     private init() {}
 
     /// Discover all active gateways, using cache if recent
-    func discoverGateways(forceRefresh: Bool = false) -> [String] {
+    func discoverGateways(forceRefresh: Bool = false) -> [GatewayInfo] {
         if !forceRefresh,
            let lastTime = lastDiscoveryTime,
            Date().timeIntervalSince(lastTime) < cacheValiditySeconds,
@@ -31,18 +37,19 @@ final class GatewayDiscovery {
     /// Create MonitoredHost objects for discovered gateways
     func discoverGatewayHosts(forceRefresh: Bool = false) -> [MonitoredHost] {
         let gateways = discoverGateways(forceRefresh: forceRefresh)
-        return gateways.enumerated().map { index, address in
+        return gateways.map { info in
             MonitoredHost(
-                address: address,
-                label: gateways.count > 1 ? "Gateway \(index + 1)" : "Gateway",
+                address: info.address,
+                label: "Gateway (\(info.interface))",
                 isEnabled: true,
-                isUserDefined: false
+                isUserDefined: false,
+                interfaceName: info.interface
             )
         }
     }
 
     /// Fetch gateways from routing table using netstat
-    private func fetchGateways() -> [String] {
+    private func fetchGateways() -> [GatewayInfo] {
         let process = Process()
         let pipe = Pipe()
 
@@ -70,30 +77,32 @@ final class GatewayDiscovery {
     /// Example lines:
     /// default            192.168.1.1        UGScg          en0
     /// default            fe80::1%en0        UGcIg          en0
-    private func parseGateways(from output: String) -> [String] {
-        var gateways: Set<String> = []
+    private func parseGateways(from output: String) -> [GatewayInfo] {
+        var gateways: Set<GatewayInfo> = []
 
         let lines = output.components(separatedBy: .newlines)
 
         for line in lines {
             let components = line.split(separator: " ", omittingEmptySubsequences: true)
 
-            // Looking for lines that start with "default"
-            guard components.count >= 2,
+            // Looking for lines that start with "default" with at least 4 columns
+            // Columns: destination, gateway, flags, netif
+            guard components.count >= 4,
                   components[0] == "default" else {
                 continue
             }
 
             let gateway = String(components[1])
+            let interface = String(components[3])
 
             // Filter out localhost and link-local addresses
             if isValidGateway(gateway) {
-                gateways.insert(gateway)
+                gateways.insert(GatewayInfo(address: gateway, interface: interface))
             }
         }
 
-        // Sort for consistent ordering
-        return gateways.sorted()
+        // Sort by interface name for consistent ordering
+        return gateways.sorted { $0.interface < $1.interface }
     }
 
     /// Check if a gateway address is valid (not localhost, not link-local)

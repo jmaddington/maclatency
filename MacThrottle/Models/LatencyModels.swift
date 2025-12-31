@@ -62,16 +62,19 @@ enum LatencyStatus: String, Codable, Sendable {
 struct MonitoredHost: Codable, Identifiable, Equatable, Hashable, Sendable {
     let id: UUID
     var address: String          // IP or hostname
-    var label: String            // "Gateway", "Google DNS", custom name
+    var label: String            // "Gateway (en0)", "Google DNS", custom name
     var isEnabled: Bool
     var isUserDefined: Bool      // false = auto-discovered gateway
+    var interfaceName: String?   // Network interface (en0, en1, etc.) - nil for user-defined hosts
 
-    init(id: UUID = UUID(), address: String, label: String, isEnabled: Bool = true, isUserDefined: Bool = false) {
+    // swiftlint:disable:next line_length
+    init(id: UUID = UUID(), address: String, label: String, isEnabled: Bool = true, isUserDefined: Bool = false, interfaceName: String? = nil) {
         self.id = id
         self.address = address
         self.label = label
         self.isEnabled = isEnabled
         self.isUserDefined = isUserDefined
+        self.interfaceName = interfaceName
     }
 
     static func == (lhs: MonitoredHost, rhs: MonitoredHost) -> Bool {
