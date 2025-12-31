@@ -35,7 +35,9 @@
             "path": "release/MacThrottle-*.zip",
             "label": "MacThrottle-${nextRelease.version}.zip"
           }
-        ]
+        ],
+        "successComment": false,
+        "failComment": false
       }
     ]
   ]
