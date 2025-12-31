@@ -66,6 +66,22 @@ final class LatencyMonitor {
         didSet { UserDefaults.standard.set(showLatencyInMenuBar, forKey: "showLatencyInMenuBar") }
     }
 
+    // MARK: - Logging Settings
+
+    /// Enable/disable SQLite ping logging (default: on)
+    var loggingEnabled: Bool = UserDefaults.standard.object(forKey: "loggingEnabled") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(loggingEnabled, forKey: "loggingEnabled") }
+    }
+
+    /// Number of days to retain ping logs (default: 30)
+    var logRetentionDays: Int = UserDefaults.standard.object(forKey: "logRetentionDays") as? Int ?? 30 {
+        didSet {
+            UserDefaults.standard.set(logRetentionDays, forKey: "logRetentionDays")
+            // Trigger cleanup when retention period changes
+            PingLogger.shared.cleanupOldRecords(olderThanDays: logRetentionDays)
+        }
+    }
+
     /// Delay in seconds before sending notification (0 = immediate)
     static let notificationDelayOptions: [Double] = [0, 5, 10, 15, 30, 60]
 
@@ -157,6 +173,19 @@ final class LatencyMonitor {
         requestNotificationPermission()
         refreshHosts()
         startMonitoring()
+        scheduleLogCleanup()
+    }
+
+    /// Schedule periodic cleanup of old log records
+    private func scheduleLogCleanup() {
+        // Run cleanup on startup
+        PingLogger.shared.cleanupOldRecords(olderThanDays: logRetentionDays)
+
+        // Schedule hourly cleanup
+        Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            PingLogger.shared.cleanupOldRecords(olderThanDays: self.logRetentionDays)
+        }
     }
 
     @MainActor
@@ -275,6 +304,11 @@ final class LatencyMonitor {
         // Update latest readings
         for reading in readings {
             latestReadings[reading.hostId] = reading
+        }
+
+        // Log to SQLite if enabled
+        if loggingEnabled {
+            PingLogger.shared.logReadings(readings)
         }
 
         // Calculate overall status (worst among all)
