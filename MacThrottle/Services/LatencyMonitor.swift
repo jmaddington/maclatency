@@ -105,6 +105,14 @@ final class LatencyMonitor {
         didSet { UserDefaults.standard.set(movingAverageSeconds, forKey: "movingAverageSeconds") }
     }
 
+    /// Whether to auto-discover and ping network gateways
+    var autoDiscoverGateways: Bool = UserDefaults.standard.object(forKey: "autoDiscoverGateways") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(autoDiscoverGateways, forKey: "autoDiscoverGateways")
+            refreshHosts()
+        }
+    }
+
     /// Delay in seconds before sending notification (0 = immediate)
     static let notificationDelayOptions: [Double] = [0, 5, 10, 15, 30, 60]
 
@@ -262,9 +270,11 @@ final class LatencyMonitor {
     func refreshHosts() {
         var newHosts: [MonitoredHost] = []
 
-        // Discover gateways
-        let gatewayHosts = GatewayDiscovery.shared.discoverGatewayHosts(forceRefresh: true)
-        newHosts.append(contentsOf: gatewayHosts)
+        // Discover gateways (if enabled)
+        if autoDiscoverGateways {
+            let gatewayHosts = GatewayDiscovery.shared.discoverGatewayHosts(forceRefresh: true)
+            newHosts.append(contentsOf: gatewayHosts)
+        }
 
         // Add user-defined hosts
         newHosts.append(contentsOf: userDefinedHosts)

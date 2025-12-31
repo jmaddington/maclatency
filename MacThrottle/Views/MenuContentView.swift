@@ -257,6 +257,9 @@ struct MenuContentView: View {
                 .help(showAddHost ? "Cancel" : "Add host")
             }
 
+            Toggle("Auto-discover Gateways", isOn: $monitor.autoDiscoverGateways)
+                .controlSize(.small)
+
             if showAddHost {
                 addHostForm
             }
