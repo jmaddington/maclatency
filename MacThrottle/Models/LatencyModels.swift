@@ -14,13 +14,38 @@ struct LatencyThresholds: Codable, Equatable, Sendable {
 
     static let `default` = LatencyThresholds()
 
-    /// Determine status from latency in milliseconds using these thresholds
-    func status(for latencyMs: Double?) -> LatencyStatus {
+    /// Returns true if thresholds are in valid ascending order (excellent < good < fair)
+    var isValid: Bool {
+        excellent < good && good < fair
+    }
+
+    /// Returns self if valid, otherwise returns default thresholds
+    /// AIDEV-NOTE: Prevents crash from Range requiring lowerBound <= upperBound [THRESH-VALID]
+    var validated: LatencyThresholds {
+        isValid ? self : .default
+    }
+
+    /// Determine status from latency in milliseconds using an optional effective thresholds snapshot.
+    /// If `effective` is provided, it is used for comparison; otherwise, `self` thresholds are used.
+    func status(for latencyMs: Double?, effective: LatencyThresholds?) -> LatencyStatus {
+        let t = (effective ?? self).validated
         guard let ms = latencyMs else { return .offline }
         switch ms {
-        case ..<excellent: return .excellent
-        case excellent..<good: return .good
-        case good..<fair: return .fair
+        case ..<t.excellent: return .excellent
+        case t.excellent..<t.good: return .good
+        case t.good..<t.fair: return .fair
+        default: return .poor
+        }
+    }
+
+    /// Determine status from latency in milliseconds using these thresholds
+    func status(for latencyMs: Double?) -> LatencyStatus {
+        let t = validated
+        guard let ms = latencyMs else { return .offline }
+        switch ms {
+        case ..<t.excellent: return .excellent
+        case t.excellent..<t.good: return .good
+        case t.good..<t.fair: return .fair
         default: return .poor
         }
     }
@@ -75,6 +100,11 @@ enum LatencyStatus: String, Codable, Sendable {
     /// Determine status from latency using custom thresholds
     static func from(latencyMs: Double?, thresholds: LatencyThresholds) -> LatencyStatus {
         thresholds.status(for: latencyMs)
+    }
+    
+    /// Determine status from latency using an optional effective thresholds snapshot. When `effective` is nil, falls back to `thresholds`.
+    static func from(latencyMs: Double?, thresholds: LatencyThresholds, effective: LatencyThresholds?) -> LatencyStatus {
+        thresholds.status(for: latencyMs, effective: effective)
     }
 }
 
@@ -170,3 +200,4 @@ private extension LatencyStatus {
         }
     }
 }
+
