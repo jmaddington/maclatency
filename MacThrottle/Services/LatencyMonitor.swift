@@ -31,6 +31,7 @@ final class LatencyMonitor {
     private(set) var history: [HistoryEntry] = []
     private(set) var overallStatus: LatencyStatus = .unknown
     private(set) var worstLatency: Double?
+    private(set) var cachedMovingAverage: Double?
 
     private var timer: Timer?
     private var previousOverallStatus: LatencyStatus = .unknown
@@ -182,28 +183,43 @@ final class LatencyMonitor {
         return overallStatus
     }
 
-    /// Calculate moving average latency over the configured window
-    /// AIDEV-NOTE: Uses history entries within movingAverageSeconds window [MAVG-CALC]
+    /// Moving average latency - returns cached value calculated during updateLatencyState
+    /// AIDEV-NOTE: Cached to prevent jitter from recomputation [MAVG-CALC]
     var movingAverageLatency: Double? {
+        cachedMovingAverage ?? iconLatency
+    }
+
+    /// Recalculate moving average - called once per poll cycle
+    private func updateMovingAverage() {
         let cutoff = Date().addingTimeInterval(-movingAverageSeconds)
         let recentEntries = history.filter { $0.timestamp >= cutoff }
-        guard !recentEntries.isEmpty else { return iconLatency }
+        guard !recentEntries.isEmpty else {
+            cachedMovingAverage = iconLatency
+            return
+        }
 
         // If a specific host is selected, average that host's readings
         if let hostId = iconSourceHostId {
             let latencies = recentEntries.compactMap { entry in
                 entry.readings.first(where: { $0.hostId == hostId })?.latencyMs
             }
-            guard !latencies.isEmpty else { return nil }
-            return latencies.reduce(0, +) / Double(latencies.count)
+            guard !latencies.isEmpty else {
+                cachedMovingAverage = nil
+                return
+            }
+            cachedMovingAverage = latencies.reduce(0, +) / Double(latencies.count)
+            return
         }
 
         // Otherwise, average the worst latency from each entry
         let worstLatencies = recentEntries.compactMap { entry -> Double? in
             entry.readings.compactMap(\.latencyMs).max()
         }
-        guard !worstLatencies.isEmpty else { return nil }
-        return worstLatencies.reduce(0, +) / Double(worstLatencies.count)
+        guard !worstLatencies.isEmpty else {
+            cachedMovingAverage = nil
+            return
+        }
+        cachedMovingAverage = worstLatencies.reduce(0, +) / Double(worstLatencies.count)
     }
 
     /// Latency to display in menu bar (based on textDisplayMode)
@@ -282,6 +298,12 @@ final class LatencyMonitor {
         // If no hosts found, add default DNS servers
         if newHosts.isEmpty {
             newHosts = defaultHosts()
+        }
+
+        // Clean up readings for hosts no longer monitored
+        let validHostIds = Set(newHosts.map(\.id))
+        for hostId in latestReadings.keys where !validHostIds.contains(hostId) {
+            latestReadings.removeValue(forKey: hostId)
         }
 
         hosts = newHosts
@@ -433,6 +455,9 @@ final class LatencyMonitor {
         // Trim old entries
         let cutoff = Date().addingTimeInterval(-Self.historyDurationSeconds)
         history.removeAll { $0.timestamp < cutoff }
+
+        // Update cached moving average
+        updateMovingAverage()
     }
 
     // MARK: - Notifications
