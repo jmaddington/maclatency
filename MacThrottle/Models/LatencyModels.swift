@@ -87,15 +87,17 @@ struct MonitoredHost: Codable, Identifiable, Equatable, Hashable, Sendable {
     var isEnabled: Bool
     var isUserDefined: Bool      // false = auto-discovered gateway
     var interfaceName: String?   // Network interface (en0, en1, etc.) - nil for user-defined hosts
+    var notifyOnIssue: Bool      // Whether to send notifications for this host's issues
 
     // swiftlint:disable:next line_length
-    init(id: UUID = UUID(), address: String, label: String, isEnabled: Bool = true, isUserDefined: Bool = false, interfaceName: String? = nil) {
+    init(id: UUID = UUID(), address: String, label: String, isEnabled: Bool = true, isUserDefined: Bool = false, interfaceName: String? = nil, notifyOnIssue: Bool = true) {
         self.id = id
         self.address = address
         self.label = label
         self.isEnabled = isEnabled
         self.isUserDefined = isUserDefined
         self.interfaceName = interfaceName
+        self.notifyOnIssue = notifyOnIssue
     }
 
     static func == (lhs: MonitoredHost, rhs: MonitoredHost) -> Bool {

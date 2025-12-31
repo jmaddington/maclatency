@@ -202,6 +202,17 @@ struct MenuContentView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
+
+                    // Notification toggle
+                    Button {
+                        monitor.toggleHostNotification(host)
+                    } label: {
+                        Image(systemName: host.notifyOnIssue ? "bell.fill" : "bell.slash")
+                            .foregroundStyle(host.notifyOnIssue ? .accentColor : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(host.notifyOnIssue ? "Notifications enabled" : "Notifications disabled")
+
                     Button {
                         monitor.removeHost(host)
                     } label: {

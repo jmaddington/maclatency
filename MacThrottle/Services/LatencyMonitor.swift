@@ -34,6 +34,7 @@ final class LatencyMonitor {
 
     private var timer: Timer?
     private var previousOverallStatus: LatencyStatus = .unknown
+    private var previousHostStatuses: [UUID: LatencyStatus] = [:]  // Per-host status tracking
     private var isMonitoring = false
 
     // MARK: - User Settings (persisted to UserDefaults)
@@ -202,6 +203,13 @@ final class LatencyMonitor {
         refreshHosts()
     }
 
+    /// Toggle host notification setting
+    func toggleHostNotification(_ host: MonitoredHost) {
+        if let index = userDefinedHosts.firstIndex(where: { $0.id == host.id }) {
+            userDefinedHosts[index].notifyOnIssue.toggle()
+        }
+    }
+
     private func defaultHosts() -> [MonitoredHost] {
         [
             MonitoredHost(address: "8.8.8.8", label: "Google DNS", isEnabled: true, isUserDefined: false),
@@ -267,9 +275,23 @@ final class LatencyMonitor {
         let latencies = readings.compactMap(\.latencyMs)
         worstLatency = latencies.max()
 
-        // Handle notifications
+        // Handle per-host notifications
+        for reading in readings {
+            let previousStatus = previousHostStatuses[reading.hostId] ?? .unknown
+            if reading.status != previousStatus {
+                handleHostStatusChange(
+                    hostId: reading.hostId,
+                    hostLabel: reading.hostLabel,
+                    from: previousStatus,
+                    to: reading.status
+                )
+            }
+            previousHostStatuses[reading.hostId] = reading.status
+        }
+
+        // Handle overall status change (for recovery notification)
         if newOverallStatus != previousOverallStatus {
-            handleStatusChange(from: previousOverallStatus, to: newOverallStatus)
+            handleOverallStatusChange(from: previousOverallStatus, to: newOverallStatus)
             previousOverallStatus = newOverallStatus
         }
 
@@ -286,25 +308,41 @@ final class LatencyMonitor {
 
     // MARK: - Notifications
 
-    private func handleStatusChange(from previous: LatencyStatus, to current: LatencyStatus) {
-        // Notify on degradation
+    /// Check if a host has notifications enabled
+    private func shouldNotifyForHost(_ hostId: UUID) -> Bool {
+        // Check user-defined hosts
+        if let host = userDefinedHosts.first(where: { $0.id == hostId }) {
+            return host.notifyOnIssue
+        }
+        // Gateway hosts always notify (could be made configurable in future)
+        return true
+    }
+
+    private func handleHostStatusChange(hostId: UUID, hostLabel: String, from previous: LatencyStatus, to current: LatencyStatus) {
+        guard shouldNotifyForHost(hostId) else { return }
+
+        // Notify on degradation to poor
         if current == .poor && notifyOnPoor && !previous.isProblematic {
             sendNotification(
-                title: "High Network Latency",
-                body: "Network latency has exceeded 200ms"
-            )
-        } else if current == .offline && notifyOnOffline && previous != .offline {
-            sendNotification(
-                title: "Network Offline",
-                body: "Unable to reach monitored hosts"
+                title: "High Latency: \(hostLabel)",
+                body: "Latency has exceeded \(Int(thresholds.fair))ms"
             )
         }
+        // Notify on going offline
+        else if current == .offline && notifyOnOffline && previous != .offline {
+            sendNotification(
+                title: "Host Offline: \(hostLabel)",
+                body: "Unable to reach \(hostLabel)"
+            )
+        }
+    }
 
-        // Notify on recovery
+    private func handleOverallStatusChange(from previous: LatencyStatus, to current: LatencyStatus) {
+        // Notify on recovery (when all hosts recover)
         if notifyOnRecovery && previous.isProblematic && !current.isProblematic && current != .unknown {
             sendNotification(
                 title: "Network Recovered",
-                body: "Network latency has returned to normal"
+                body: "All hosts responding normally"
             )
         }
     }
