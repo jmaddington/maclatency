@@ -10,6 +10,7 @@ struct MenuContentView: View {
     @State private var newHostLabel: String = ""
     @State private var showAddHost: Bool = false
     @State private var showThresholds: Bool = false
+    @State private var showLogging: Bool = false
 
     /// Get color for latency using current thresholds
     private func colorForLatency(_ ms: Double) -> Color {
@@ -129,6 +130,9 @@ struct MenuContentView: View {
 
             // Thresholds section
             thresholdsSection
+
+            // Logging section
+            loggingSection
 
             Divider()
 
@@ -317,6 +321,67 @@ struct MenuContentView: View {
                 .font(.caption2)
                 .foregroundColor(color)
         }
+    }
+
+    @ViewBuilder
+    private var loggingSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                showLogging.toggle()
+            } label: {
+                HStack {
+                    Text("History Logging")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Image(systemName: showLogging ? "chevron.down" : "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+            .buttonStyle(.plain)
+
+            if showLogging {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Enable Logging", isOn: $monitor.loggingEnabled)
+                        .controlSize(.small)
+
+                    HStack {
+                        Text("Retain:")
+                        Spacer()
+                        Picker("", selection: $monitor.logRetentionDays) {
+                            ForEach(PingLogger.retentionDaysOptions, id: \.self) { days in
+                                Text("\(days) days").tag(days)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(width: 90)
+                    }
+                    .controlSize(.small)
+
+                    // Show stats
+                    let stats = getLoggingStats()
+                    Text(stats)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    Button("Clear All Logs") {
+                        PingLogger.shared.deleteAllRecords()
+                    }
+                    .controlSize(.small)
+                    .foregroundColor(.red)
+                }
+                .padding(.leading, 8)
+            }
+        }
+    }
+
+    private func getLoggingStats() -> String {
+        let count = PingLogger.shared.getRecordCount()
+        let size = PingLogger.shared.getDatabaseSize()
+        let sizeStr = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        return "\(count.formatted()) records (\(sizeStr))"
     }
 
     private func openAboutWindow() {
