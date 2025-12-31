@@ -1,60 +1,60 @@
-# MacThrottle
+# MacLatency
 
-[![GitHub Release](https://img.shields.io/github/v/release/angristan/MacThrottle)](https://github.com/angristan/MacThrottle/releases)
-[![CI](https://github.com/angristan/MacThrottle/actions/workflows/ci.yml/badge.svg)](https://github.com/angristan/MacThrottle/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![macOS](https://img.shields.io/badge/macOS-15+-blue)](https://github.com/angristan/MacThrottle)
+[![macOS](https://img.shields.io/badge/macOS-15+-blue)](https://github.com/jmaddington/maclatency)
 [![Swift](https://img.shields.io/badge/Swift-6-orange)](https://swift.org)
 
-A lightweight macOS menu bar app that monitors thermal pressure and alerts you when your Mac is being throttled. No admin privileges required.
+A lightweight macOS menu bar app that monitors network latency to your gateway and custom hosts. See at a glance if your network is healthy.
 
 ![screenshot](./assets/screenshot.png)
 
+## Background
+
+I've wanted an app like this for years, but didn't want to learn Swift to make it happen. With the advent of LLMs, I finally have my application.
+
+[NirSoft's PingInfoView](https://www.nirsoft.net/utils/multiple_ping_tool.html) was what I wanted on Windows, but this new app is even closer to what I need on my Mac - a simple menu bar indicator showing network health at a glance.
+
+This project started as a fork of [MacThrottle](https://github.com/angristan/MacThrottle) by angristan, which was a thermal monitoring app. I used [Claude Code](https://claude.ai/claude-code) and GPT-5 (via Xcode) to transform it into a network latency monitor.
+
 ## Features
 
-- Displays thermal pressure state in the menu bar using different thermometer icons
-- Shows CPU core temperature (reads directly from SMC)
-- Shows fan speed percentage (on Macs with fans)
-- History graph showing thermal state, temperature, and fan speed over the last 10 minutes
-- Statistics showing time spent in each thermal state
-- Configurable notifications:
-  - When heavy throttling begins
-  - When critical throttling occurs
-  - When throttling stops (recovery)
+- Displays network latency status in the menu bar with color-coded icons
+- Auto-discovers and monitors your network gateway(s)
+- Add custom hosts to monitor (IP addresses or hostnames)
+- History graph showing latency over the last 10 minutes
+- Statistics showing time spent in each latency state
+- Configurable latency thresholds (default: <50ms excellent, <100ms good, <200ms fair)
+- Configurable poll interval (1-30 seconds)
+- Notifications for:
+  - Poor latency (>200ms by default)
+  - Host offline/unreachable
+  - Recovery to good status
   - Optional notification sounds
 - Launch at Login option
-- No helper daemon or admin privileges required
+- No admin privileges required
 
-## Thermal States
+## Latency States
 
-| Icon                   | State    | Description               |
-| ---------------------- | -------- | ------------------------- |
-| `thermometer.low`      | Nominal  | Normal operation          |
-| `thermometer.medium`   | Moderate | Elevated thermal pressure |
-| `thermometer.high`     | Heavy    | Active throttling         |
-| `thermometer.sun.fill` | Critical | Severe throttling         |
+| Color  | State     | Default Threshold |
+| ------ | --------- | ----------------- |
+| Green  | Excellent | < 50ms            |
+| Yellow | Good      | 50-100ms          |
+| Orange | Fair      | 100-200ms         |
+| Red    | Poor      | > 200ms           |
+| Red    | Offline   | Timeout           |
 
 ## Installation
 
-Since the app is not signed, Gatekeeper may block it on first launch. You can either download a pre-built version from Releases and remove the quarantine attribute, or build it locally with Xcode to sign it with your own certificate.
+Since the app is not signed, Gatekeeper may block it on first launch. You can build it locally with Xcode to sign it with your own certificate.
 
-Sorry about the inconvenience! I may get an Apple Developer account in the future to sign the app properly.
-
-### Option 1: Download from Releases
-
-1. Download the latest `.dmg` from [Releases](https://github.com/angristan/MacThrottle/releases)
-2. Open it, and drag `MacThrottle.app` to your Applications folder
-3. Remove quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/MacThrottle.app`
-4. Open the app
-
-### Option 2: Build Locally
+### Build Locally
 
 Building locally automatically signs the app with your development certificate, avoiding Gatekeeper issues.
 
 ```bash
 # Clone the repo
-git clone https://github.com/angristan/MacThrottle.git
-cd MacThrottle
+git clone https://github.com/jmaddington/maclatency.git
+cd maclatency
 
 # Build with Xcode
 xcodebuild -project MacThrottle.xcodeproj \
@@ -70,57 +70,25 @@ Or open `MacThrottle.xcodeproj` in Xcode and press `Cmd+R` to build and run.
 
 ## How It Works
 
-### Thermal Pressure
+### Latency Monitoring
 
-MacThrottle reads thermal pressure using the Darwin notification system ([`notify_get_state`](https://developer.apple.com/documentation/darwinnotify/notify_get_state)), specifically the `com.apple.system.thermalpressurelevel` notification. The system reports 5 levels (nominal, moderate, heavy, trapping, sleeping), but MacThrottle consolidates the last two into "critical" since they're rarely reached in practice. Heavy is where throttling really kicks in.
+MacLatency uses ICMP ping to measure round-trip time to monitored hosts. It automatically discovers your network gateway(s) by querying the system routing table, and you can add additional hosts to monitor.
 
-> **Note:** This notification name is not publicly documented by Apple. It comes from the private [`OSThermalNotification.h`](https://github.com/tripleCC/Laboratory/blob/a7d1192f25d718e3b01a015ca35bfcef4419e883/AppleSources/Libc-1272.250.1/include/libkern/OSThermalNotification.h#L44-L48) header (as `kOSThermalNotificationPressureLevelName`) and has been available since macOS 10.10. See [Thermals and macOS](https://dmaclach.medium.com/thermals-and-macos-c0db81062889) for more details on macOS thermal APIs.
-> You can see it implemented [in Bazel for example](https://github.com/bazelbuild/bazel/blob/83bddd49aae9e42b4aff1c79c4f437a31b9aec8c/src/main/native/darwin/system_thermal_monitor_jni.cc#L27).
+The app polls all enabled hosts at a configurable interval (default: 5 seconds) and displays the worst latency in the menu bar. Individual host latencies are shown in the dropdown menu.
 
-#### Why not `ProcessInfo.thermalState`?
+### Gateway Discovery
 
-macOS provides [`ProcessInfo.thermalState`](https://developer.apple.com/documentation/foundation/processinfo/thermalstate-swift.enum) as a public API, but it has limited granularity (only 4 states vs the 5 actual pressure levels):
-
-| `ProcessInfo.thermalState` | Actual Pressure Level |
-| -------------------------- | --------------------- |
-| nominal                    | nominal               |
-| **fair**                   | **moderate**          |
-| **fair**                   | **heavy**             |
-| serious                    | trapping              |
-| critical                   | sleeping              |
-
-The `moderate` and `heavy` states both map to `fair` in `ProcessInfo.thermalState`, but the difference is significant: `heavy` is when throttling really kicks in. MacThrottle provides this granularity.
-
-### Temperature Reading
-
-MacThrottle displays temperature alongside thermal pressure. Reported temperature is the maxmium of all CPU/GPU core temperatures.
-
-It's using two methods:
-
-#### SMC (Primary)
-
-The **System Management Controller (SMC)** is a hardware chip in every Mac that manages thermal sensors, fans, and power. MacThrottle reads directly from the SMC via IOKit to get actual CPU core temperatures.
-
-- Reads chip-specific sensor keys (different for M1, M2, M3, etc)
-- Provides accurate per-core temperature readings
-- Based on the approach used by [Stats](https://github.com/exelban/stats)
-
-#### IOHIDEventSystem (Fallback)
-
-If SMC reading fails, MacThrottle falls back to the **IOHIDEventSystem** private API:
-
-- Reads temperature events from PMU (Power Management Unit) sensors
-- Simpler but less granular: returns aggregate "tdie" temperatures rather than per-core values
-- May report slightly different (typically lower) values than SMC
-
-The displayed temperature is the maximum reading across all available CPU sensors.
-
-### Fan Speed
-
-On Macs with fans, MacThrottle reads fan speed from the SMC using standard fan keys (`FNum` for count, `F0Ac`/`F1Ac` for actual RPM, `F0Mx`/`F1Mx` for maximum RPM). The speed is displayed as a percentage of maximum capacity and shown as a dashed cyan line on the history graph.
-
-Fanless Macs (like MacBook Air) won't show fan data or the "Show Fan Speed" toggle.
+On startup and when you click "Refresh", the app discovers active network interfaces and their default gateways using the system routing table. This allows it to monitor your actual network path rather than just an arbitrary external server.
 
 ## Requirements
 
 - macOS 15.0+ (Sequoia)
+
+## Credits
+
+- Original [MacThrottle](https://github.com/angristan/MacThrottle) by [angristan](https://github.com/angristan)
+- Transformed to latency monitor using [Claude Code](https://claude.ai/claude-code) and GPT-5
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
