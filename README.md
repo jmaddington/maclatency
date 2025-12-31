@@ -6,8 +6,6 @@
 
 A lightweight macOS menu bar app that monitors network latency to your gateway and custom hosts. See at a glance if your network is healthy.
 
-![screenshot](./assets/screenshot.png)
-
 ## Background
 
 I've wanted an app like this for years, but didn't want to learn Swift to make it happen. With the advent of LLMs, I finally have my application.
