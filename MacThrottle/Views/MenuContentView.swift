@@ -44,6 +44,27 @@ struct MenuContentView: View {
                                 .frame(width: 8, height: 8)
                             Text(reading.hostLabel)
                                 .lineLimit(1)
+
+                            // Icon source indicator/button
+                            Button {
+                                if monitor.iconSourceHostId == reading.hostId {
+                                    monitor.iconSourceHostId = nil  // Toggle off
+                                } else {
+                                    monitor.iconSourceHostId = reading.hostId
+                                }
+                            } label: {
+                                Image(systemName: monitor.iconSourceHostId == reading.hostId
+                                    ? "target"
+                                    : "circle.dotted")
+                                    .foregroundColor(monitor.iconSourceHostId == reading.hostId
+                                        ? .accentColor
+                                        : .secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help(monitor.iconSourceHostId == reading.hostId
+                                ? "Using for icon (click to use worst)"
+                                : "Use for menu bar icon")
+
                             Spacer()
                             Text(reading.displayLatency)
                                 .foregroundColor(reading.status.color)

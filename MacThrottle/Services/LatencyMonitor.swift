@@ -74,6 +74,38 @@ final class LatencyMonitor {
         }
     }
 
+    // MARK: - Icon Source Selection
+
+    /// The host ID to use for menu bar icon color. If nil, use worst latency (default behavior)
+    var iconSourceHostId: UUID? = {
+        guard let uuidString = UserDefaults.standard.string(forKey: "iconSourceHostId") else { return nil }
+        return UUID(uuidString: uuidString)
+    }() {
+        didSet {
+            if let id = iconSourceHostId {
+                UserDefaults.standard.set(id.uuidString, forKey: "iconSourceHostId")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "iconSourceHostId")
+            }
+        }
+    }
+
+    /// Latency for menu bar icon (specific host or worst)
+    var iconLatency: Double? {
+        if let hostId = iconSourceHostId, let reading = latestReadings[hostId] {
+            return reading.latencyMs
+        }
+        return worstLatency
+    }
+
+    /// Status for menu bar icon (specific host or overall)
+    var iconStatus: LatencyStatus {
+        if let hostId = iconSourceHostId, let reading = latestReadings[hostId] {
+            return reading.status
+        }
+        return overallStatus
+    }
+
     // MARK: - Computed Properties
 
     var timeInEachState: [(status: LatencyStatus, duration: TimeInterval)] {
