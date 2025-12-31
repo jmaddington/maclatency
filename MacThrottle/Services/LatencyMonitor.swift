@@ -114,6 +114,32 @@ final class LatencyMonitor {
         }
     }
 
+    // MARK: - Menu Bar Update Interval
+
+    /// How often to update the menu bar display (0 = every ping)
+    static let menuBarUpdateOptions: [(value: Double, label: String)] = [
+        (0, "Every Ping"),
+        (1, "1s"),
+        (5, "5s"),
+        (10, "10s"),
+        (30, "30s"),
+        (60, "1 min"),
+        (300, "5 min")
+    ]
+
+    var menuBarUpdateInterval: Double = UserDefaults.standard.object(forKey: "menuBarUpdateInterval") as? Double ?? 10.0 {
+        didSet { UserDefaults.standard.set(menuBarUpdateInterval, forKey: "menuBarUpdateInterval") }
+    }
+
+    /// Cached latency for menu bar display - updates at menuBarUpdateInterval
+    private(set) var menuBarLatency: Double?
+
+    /// Cached status for menu bar display - updates at menuBarUpdateInterval
+    private(set) var menuBarStatus: LatencyStatus = .unknown
+
+    /// Last time menu bar was updated
+    private var lastMenuBarUpdate: Date = .distantPast
+
     /// Delay in seconds before sending notification (0 = immediate)
     static let notificationDelayOptions: [Double] = [0, 5, 10, 15, 30, 60]
 
@@ -458,6 +484,22 @@ final class LatencyMonitor {
 
         // Update cached moving average
         updateMovingAverage()
+
+        // Update menu bar display at configured interval
+        updateMenuBarDisplayIfNeeded()
+    }
+
+    /// Update menu bar cached values if enough time has passed
+    private func updateMenuBarDisplayIfNeeded() {
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastMenuBarUpdate)
+
+        // Update if interval is 0 (every ping) or enough time has passed
+        if menuBarUpdateInterval == 0 || elapsed >= menuBarUpdateInterval {
+            menuBarLatency = displayLatency
+            menuBarStatus = iconStatus
+            lastMenuBarUpdate = now
+        }
     }
 
     // MARK: - Notifications

@@ -164,6 +164,21 @@ struct MenuContentView: View {
                     }
                     .controlSize(.small)
                 }
+
+                // Menu bar update interval
+                HStack {
+                    Text("Update:")
+                    Spacer()
+                    Picker("", selection: $monitor.menuBarUpdateInterval) {
+                        ForEach(LatencyMonitor.menuBarUpdateOptions, id: \.value) { option in
+                            Text(option.label).tag(option.value)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(width: 90)
+                }
+                .controlSize(.small)
             }
 
             HStack {

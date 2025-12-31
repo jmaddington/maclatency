@@ -12,8 +12,8 @@ struct MacThrottleApp: App {
             MenuContentView(monitor: monitor)
         } label: {
             MenuBarIcon(
-                status: monitor.iconStatus,
-                latency: monitor.displayLatency,
+                status: monitor.menuBarStatus,
+                latency: monitor.menuBarLatency,
                 displayMode: monitor.statusBarDisplayMode
             )
         }
