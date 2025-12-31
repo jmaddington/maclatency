@@ -39,6 +39,14 @@ final class LatencyMonitor {
     private var pendingNotifications: [UUID: LatencyStatus] = [:]  // Notifications waiting for delay
     private var isMonitoring = false
 
+    // MARK: - Threshold Editing State
+
+    /// When true, UI is editing thresholds and we should use a frozen snapshot for evaluations
+    var isEditingThresholds: Bool = false
+
+    /// Snapshot of thresholds to use while editing is active
+    var frozenThresholds: LatencyThresholds? = nil
+
     // MARK: - User Settings (persisted to UserDefaults)
 
     // swiftlint:disable:next line_length
@@ -64,6 +72,37 @@ final class LatencyMonitor {
 
     var showLatencyInMenuBar: Bool = UserDefaults.standard.object(forKey: "showLatencyInMenuBar") as? Bool ?? true {
         didSet { UserDefaults.standard.set(showLatencyInMenuBar, forKey: "showLatencyInMenuBar") }
+    }
+
+    // MARK: - Status Bar Display Settings
+
+    /// What to show in status bar: icon only, text only, or both
+    var statusBarDisplayMode: StatusBarDisplayMode = {
+        guard let rawValue = UserDefaults.standard.string(forKey: "statusBarDisplayMode"),
+              let mode = StatusBarDisplayMode(rawValue: rawValue) else {
+            return .iconAndText
+        }
+        return mode
+    }() {
+        didSet { UserDefaults.standard.set(statusBarDisplayMode.rawValue, forKey: "statusBarDisplayMode") }
+    }
+
+    /// What text to show: latest ping or moving average
+    var textDisplayMode: TextDisplayMode = {
+        guard let rawValue = UserDefaults.standard.string(forKey: "textDisplayMode"),
+              let mode = TextDisplayMode(rawValue: rawValue) else {
+            return .latestPing
+        }
+        return mode
+    }() {
+        didSet { UserDefaults.standard.set(textDisplayMode.rawValue, forKey: "textDisplayMode") }
+    }
+
+    /// Window size for moving average calculation in seconds
+    static let movingAverageOptions: [Double] = [5, 10, 15, 30, 60]
+
+    var movingAverageSeconds: Double = UserDefaults.standard.object(forKey: "movingAverageSeconds") as? Double ?? 10.0 {
+        didSet { UserDefaults.standard.set(movingAverageSeconds, forKey: "movingAverageSeconds") }
     }
 
     /// Delay in seconds before sending notification (0 = immediate)
@@ -110,10 +149,63 @@ final class LatencyMonitor {
 
     /// Status for menu bar icon (specific host or overall)
     var iconStatus: LatencyStatus {
+        // Prefer a specific host if selected
         if let hostId = iconSourceHostId, let reading = latestReadings[hostId] {
-            return reading.status
+            // Re-evaluate using effective thresholds while editing
+            let effective = isEditingThresholds ? frozenThresholds : nil
+            if let ms = reading.latencyMs {
+                return LatencyStatus.from(latencyMs: ms, thresholds: thresholds, effective: effective)
+            } else {
+                return .offline
+            }
+        }
+        // Fallback to overall status; if editing, recompute worst among latestReadings
+        if isEditingThresholds {
+            let effective = frozenThresholds
+            let statuses = latestReadings.values.map { r -> LatencyStatus in
+                if let ms = r.latencyMs {
+                    return LatencyStatus.from(latencyMs: ms, thresholds: thresholds, effective: effective)
+                } else {
+                    return .offline
+                }
+            }
+            return statuses.max(by: { $0.severity < $1.severity }) ?? .unknown
         }
         return overallStatus
+    }
+
+    /// Calculate moving average latency over the configured window
+    /// AIDEV-NOTE: Uses history entries within movingAverageSeconds window [MAVG-CALC]
+    var movingAverageLatency: Double? {
+        let cutoff = Date().addingTimeInterval(-movingAverageSeconds)
+        let recentEntries = history.filter { $0.timestamp >= cutoff }
+        guard !recentEntries.isEmpty else { return iconLatency }
+
+        // If a specific host is selected, average that host's readings
+        if let hostId = iconSourceHostId {
+            let latencies = recentEntries.compactMap { entry in
+                entry.readings.first(where: { $0.hostId == hostId })?.latencyMs
+            }
+            guard !latencies.isEmpty else { return nil }
+            return latencies.reduce(0, +) / Double(latencies.count)
+        }
+
+        // Otherwise, average the worst latency from each entry
+        let worstLatencies = recentEntries.compactMap { entry -> Double? in
+            entry.readings.compactMap(\.latencyMs).max()
+        }
+        guard !worstLatencies.isEmpty else { return nil }
+        return worstLatencies.reduce(0, +) / Double(worstLatencies.count)
+    }
+
+    /// Latency to display in menu bar (based on textDisplayMode)
+    var displayLatency: Double? {
+        switch textDisplayMode {
+        case .latestPing:
+            return iconLatency
+        case .movingAverage:
+            return movingAverageLatency
+        }
     }
 
     // MARK: - Computed Properties
@@ -410,3 +502,4 @@ private extension LatencyStatus {
         }
     }
 }
+

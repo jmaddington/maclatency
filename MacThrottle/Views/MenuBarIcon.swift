@@ -6,14 +6,16 @@ import SwiftUI
 struct MenuBarIcon: View {
     let status: LatencyStatus
     let latency: Double?
-    let showLatency: Bool
+    let displayMode: StatusBarDisplayMode
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: iconName)
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(status.color, .primary)
-            if showLatency, let ms = latency {
+            if displayMode != .textOnly {
+                Image(systemName: iconName)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(status.color, .primary)
+            }
+            if displayMode != .iconOnly, let ms = latency {
                 Text(formatLatency(ms))
                     .monospacedDigit()
             }

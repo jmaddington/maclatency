@@ -11,9 +11,16 @@ struct MenuContentView: View {
     @State private var showAddHost: Bool = false
     @State private var showThresholds: Bool = false
 
+    @FocusState private var focusedThresholdField: ThresholdField?
+
+    private enum ThresholdField: Hashable {
+        case excellent, good, fair
+    }
+
     /// Get color for latency using current thresholds
     private func colorForLatency(_ ms: Double) -> Color {
-        monitor.thresholds.status(for: ms).color
+        let effective = monitor.isEditingThresholds ? monitor.frozenThresholds : nil
+        return monitor.thresholds.status(for: ms, effective: effective).color
     }
 
     var body: some View {
@@ -110,8 +117,54 @@ struct MenuContentView: View {
             ))
             .controlSize(.small)
 
-            Toggle("Show Latency in Menu Bar", isOn: $monitor.showLatencyInMenuBar)
+            // Status bar display mode
+            HStack {
+                Text("Menu Bar:")
+                Spacer()
+                Picker("", selection: $monitor.statusBarDisplayMode) {
+                    ForEach(StatusBarDisplayMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(width: 100)
+            }
+            .controlSize(.small)
+
+            // Text display mode (only show if text is displayed)
+            if monitor.statusBarDisplayMode != .iconOnly {
+                HStack {
+                    Text("Show:")
+                    Spacer()
+                    Picker("", selection: $monitor.textDisplayMode) {
+                        ForEach(TextDisplayMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(width: 120)
+                }
                 .controlSize(.small)
+
+                // Moving average window (only show if moving average selected)
+                if monitor.textDisplayMode == .movingAverage {
+                    HStack {
+                        Text("Avg Window:")
+                        Spacer()
+                        Picker("", selection: $monitor.movingAverageSeconds) {
+                            ForEach(LatencyMonitor.movingAverageOptions, id: \.self) { seconds in
+                                Text("\(Int(seconds))s").tag(seconds)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(width: 60)
+                    }
+                    .controlSize(.small)
+                }
+            }
 
             HStack {
                 Text("Poll Interval:")
@@ -137,7 +190,7 @@ struct MenuContentView: View {
                 .foregroundStyle(.secondary)
 
             Group {
-                Toggle("On Poor (>\(Int(monitor.thresholds.fair))ms)", isOn: $monitor.notifyOnPoor)
+                Toggle("On Poor (>\(Int((monitor.isEditingThresholds ? (monitor.frozenThresholds?.fair ?? monitor.thresholds.fair) : monitor.thresholds.fair)))ms)", isOn: $monitor.notifyOnPoor)
                 Toggle("On Offline", isOn: $monitor.notifyOnOffline)
                 Toggle("On Recovery", isOn: $monitor.notifyOnRecovery)
                 Toggle("Sound", isOn: $monitor.notificationSound)
@@ -313,10 +366,28 @@ struct MenuContentView: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 50)
                 .font(.caption2)
+                .focused($focusedThresholdField, equals: fieldForBinding(value))
+                .onChange(of: focusedThresholdField) { _, newFocus in
+                    let isEditing = newFocus != nil
+                    if isEditing && !monitor.isEditingThresholds {
+                        monitor.isEditingThresholds = true
+                        monitor.frozenThresholds = monitor.thresholds
+                    } else if !isEditing && monitor.isEditingThresholds {
+                        monitor.isEditingThresholds = false
+                        monitor.frozenThresholds = nil
+                    }
+                }
             Text("ms)")
                 .font(.caption2)
                 .foregroundColor(color)
         }
+    }
+
+    private func fieldForBinding(_ binding: Binding<Double>) -> ThresholdField? {
+        if binding.wrappedValue == monitor.thresholds.excellent { return .excellent }
+        if binding.wrappedValue == monitor.thresholds.good { return .good }
+        if binding.wrappedValue == monitor.thresholds.fair { return .fair }
+        return nil
     }
 
     private func openAboutWindow() {

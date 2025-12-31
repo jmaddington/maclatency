@@ -186,6 +186,38 @@ struct HistoryEntry {
     }
 }
 
+// MARK: - Status Bar Display Mode
+
+/// Controls what is shown in the menu bar status area
+enum StatusBarDisplayMode: String, Codable, CaseIterable, Sendable {
+    case iconOnly = "icon"
+    case textOnly = "text"
+    case iconAndText = "both"
+
+    var displayName: String {
+        switch self {
+        case .iconOnly: return "Icon Only"
+        case .textOnly: return "Text Only"
+        case .iconAndText: return "Icon & Text"
+        }
+    }
+}
+
+// MARK: - Text Display Mode
+
+/// Controls what text value is shown when text is displayed
+enum TextDisplayMode: String, Codable, CaseIterable, Sendable {
+    case latestPing = "latest"
+    case movingAverage = "average"
+
+    var displayName: String {
+        switch self {
+        case .latestPing: return "Latest Ping"
+        case .movingAverage: return "Moving Average"
+        }
+    }
+}
+
 // MARK: - Status Severity (for comparison)
 
 private extension LatencyStatus {
