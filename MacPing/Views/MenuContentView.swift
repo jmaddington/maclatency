@@ -9,7 +9,9 @@ struct MenuContentView: View {
     @State private var newHostAddress: String = ""
     @State private var newHostLabel: String = ""
     @State private var showAddHost: Bool = false
+    @State private var showSettings: Bool = false
     @State private var showThresholds: Bool = false
+    @State private var showNotifications: Bool = false
 
     @FocusState private var focusedThresholdField: ThresholdField?
 
@@ -106,128 +108,13 @@ struct MenuContentView: View {
 
             Divider()
 
-            // Settings
-            Text("Settings")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Toggle("Launch at Login", isOn: Binding(
-                get: { LaunchAtLoginManager.shared.isEnabled },
-                set: { LaunchAtLoginManager.shared.isEnabled = $0 }
-            ))
-            .controlSize(.small)
-
-            // Status bar display mode
-            HStack {
-                Text("Menu Bar:")
-                Spacer()
-                Picker("", selection: $monitor.statusBarDisplayMode) {
-                    ForEach(StatusBarDisplayMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: 100)
-            }
-            .controlSize(.small)
-
-            // Text display mode (only show if text is displayed)
-            if monitor.statusBarDisplayMode.showsText {
-                HStack {
-                    Text("Show:")
-                    Spacer()
-                    Picker("", selection: $monitor.textDisplayMode) {
-                        ForEach(TextDisplayMode.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(width: 120)
-                }
-                .controlSize(.small)
-
-                // Moving average window (only show if moving average selected)
-                if monitor.textDisplayMode == .movingAverage {
-                    HStack {
-                        Text("Avg Window:")
-                        Spacer()
-                        Picker("", selection: $monitor.movingAverageSeconds) {
-                            ForEach(LatencyMonitor.movingAverageOptions, id: \.self) { seconds in
-                                Text("\(Int(seconds))s").tag(seconds)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .frame(width: 60)
-                    }
-                    .controlSize(.small)
-                }
-
-                // Menu bar update interval
-                HStack {
-                    Text("Update:")
-                    Spacer()
-                    Picker("", selection: $monitor.menuBarUpdateInterval) {
-                        ForEach(LatencyMonitor.menuBarUpdateOptions, id: \.value) { option in
-                            Text(option.label).tag(option.value)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(width: 90)
-                }
-                .controlSize(.small)
-            }
-
-            HStack {
-                Text("Poll Interval:")
-                Spacer()
-                Picker("", selection: $monitor.pollIntervalSeconds) {
-                    ForEach(LatencyMonitor.pollIntervalOptions, id: \.self) { interval in
-                        Text("\(Int(interval))s").tag(interval)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: 60)
-            }
-            .controlSize(.small)
-
-            // Thresholds section
-            thresholdsSection
+            // Settings section
+            settingsSection
 
             Divider()
 
-            Text("Notifications")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Group {
-                Toggle("On Poor (>\(Int((monitor.isEditingThresholds ? (monitor.frozenThresholds?.fair ?? monitor.thresholds.fair) : monitor.thresholds.fair)))ms)", isOn: $monitor.notifyOnPoor)
-                Toggle("On Offline", isOn: $monitor.notifyOnOffline)
-                Toggle("On Recovery", isOn: $monitor.notifyOnRecovery)
-                Toggle("Sound", isOn: $monitor.notificationSound)
-
-                HStack {
-                    Text("Delay:")
-                    Spacer()
-                    Picker("", selection: $monitor.notificationDelaySeconds) {
-                        ForEach(LatencyMonitor.notificationDelayOptions, id: \.self) { delay in
-                            if delay == 0 {
-                                Text("Immediate").tag(delay)
-                            } else {
-                                Text("\(Int(delay))s").tag(delay)
-                            }
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(width: 90)
-                }
-            }
-            .controlSize(.small)
+            // Notifications section
+            notificationsSection
 
             Divider()
 
@@ -340,6 +227,166 @@ struct MenuContentView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                showSettings.toggle()
+            } label: {
+                HStack {
+                    Text("Settings")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Image(systemName: showSettings ? "chevron.down" : "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+            .buttonStyle(.plain)
+
+            if showSettings {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Launch at Login", isOn: Binding(
+                        get: { LaunchAtLoginManager.shared.isEnabled },
+                        set: { LaunchAtLoginManager.shared.isEnabled = $0 }
+                    ))
+                    .controlSize(.small)
+
+                    // Status bar display mode
+                    HStack {
+                        Text("Menu Bar:")
+                        Spacer()
+                        Picker("", selection: $monitor.statusBarDisplayMode) {
+                            ForEach(StatusBarDisplayMode.allCases, id: \.self) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(width: 100)
+                    }
+                    .controlSize(.small)
+
+                    // Text display mode (only show if text is displayed)
+                    if monitor.statusBarDisplayMode.showsText {
+                        HStack {
+                            Text("Show:")
+                            Spacer()
+                            Picker("", selection: $monitor.textDisplayMode) {
+                                ForEach(TextDisplayMode.allCases, id: \.self) { mode in
+                                    Text(mode.displayName).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(width: 120)
+                        }
+                        .controlSize(.small)
+
+                        // Moving average window (only show if moving average selected)
+                        if monitor.textDisplayMode == .movingAverage {
+                            HStack {
+                                Text("Avg Window:")
+                                Spacer()
+                                Picker("", selection: $monitor.movingAverageSeconds) {
+                                    ForEach(LatencyMonitor.movingAverageOptions, id: \.self) { seconds in
+                                        Text("\(Int(seconds))s").tag(seconds)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .frame(width: 60)
+                            }
+                            .controlSize(.small)
+                        }
+
+                        // Menu bar update interval
+                        HStack {
+                            Text("Update:")
+                            Spacer()
+                            Picker("", selection: $monitor.menuBarUpdateInterval) {
+                                ForEach(LatencyMonitor.menuBarUpdateOptions, id: \.value) { option in
+                                    Text(option.label).tag(option.value)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(width: 90)
+                        }
+                        .controlSize(.small)
+                    }
+
+                    HStack {
+                        Text("Poll Interval:")
+                        Spacer()
+                        Picker("", selection: $monitor.pollIntervalSeconds) {
+                            ForEach(LatencyMonitor.pollIntervalOptions, id: \.self) { interval in
+                                Text("\(Int(interval))s").tag(interval)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(width: 60)
+                    }
+                    .controlSize(.small)
+
+                    // Thresholds sub-section
+                    thresholdsSection
+                }
+                .padding(.leading, 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var notificationsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                showNotifications.toggle()
+            } label: {
+                HStack {
+                    Text("Notifications")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Image(systemName: showNotifications ? "chevron.down" : "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+            .buttonStyle(.plain)
+
+            if showNotifications {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("On Poor (>\(Int((monitor.isEditingThresholds ? (monitor.frozenThresholds?.fair ?? monitor.thresholds.fair) : monitor.thresholds.fair)))ms)", isOn: $monitor.notifyOnPoor)
+                    Toggle("On Offline", isOn: $monitor.notifyOnOffline)
+                    Toggle("On Recovery", isOn: $monitor.notifyOnRecovery)
+                    Toggle("Sound", isOn: $monitor.notificationSound)
+
+                    HStack {
+                        Text("Delay:")
+                        Spacer()
+                        Picker("", selection: $monitor.notificationDelaySeconds) {
+                            ForEach(LatencyMonitor.notificationDelayOptions, id: \.self) { delay in
+                                if delay == 0 {
+                                    Text("Immediate").tag(delay)
+                                } else {
+                                    Text("\(Int(delay))s").tag(delay)
+                                }
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(width: 90)
+                    }
+                }
+                .controlSize(.small)
+                .padding(.leading, 8)
+            }
+        }
     }
 
     @ViewBuilder
