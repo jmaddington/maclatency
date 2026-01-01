@@ -14,7 +14,8 @@ struct MacThrottleApp: App {
             MenuBarIcon(
                 status: monitor.menuBarStatus,
                 latency: monitor.menuBarLatency,
-                displayMode: monitor.statusBarDisplayMode
+                displayMode: monitor.statusBarDisplayMode,
+                thresholds: monitor.thresholds
             )
         }
         .menuBarExtraStyle(.window)

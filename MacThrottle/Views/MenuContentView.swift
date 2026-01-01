@@ -133,7 +133,7 @@ struct MenuContentView: View {
             .controlSize(.small)
 
             // Text display mode (only show if text is displayed)
-            if monitor.statusBarDisplayMode != .iconOnly {
+            if monitor.statusBarDisplayMode.showsText {
                 HStack {
                     Text("Show:")
                     Spacer()

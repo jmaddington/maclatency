@@ -191,15 +191,22 @@ struct HistoryEntry {
 /// Controls what is shown in the menu bar status area
 enum StatusBarDisplayMode: String, Codable, CaseIterable, Sendable {
     case iconOnly = "icon"
+    case iconGradient = "gradient"
     case textOnly = "text"
     case iconAndText = "both"
 
     var displayName: String {
         switch self {
         case .iconOnly: return "Icon Only"
+        case .iconGradient: return "Icon (Gradient)"
         case .textOnly: return "Text Only"
         case .iconAndText: return "Icon & Text"
         }
+    }
+
+    /// Whether this mode shows text
+    var showsText: Bool {
+        self == .textOnly || self == .iconAndText
     }
 }
 
