@@ -19,7 +19,7 @@
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md", "MacThrottle.xcodeproj/project.pbxproj"],
+        "assets": ["CHANGELOG.md", "MacPing.xcodeproj/project.pbxproj"],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
@@ -28,12 +28,12 @@
       {
         "assets": [
           {
-            "path": "release/MacThrottle-*.dmg",
-            "label": "MacThrottle-${nextRelease.version}.dmg"
+            "path": "release/MacPing-*.dmg",
+            "label": "MacPing-${nextRelease.version}.dmg"
           },
           {
-            "path": "release/MacThrottle-*.zip",
-            "label": "MacThrottle-${nextRelease.version}.zip"
+            "path": "release/MacPing-*.zip",
+            "label": "MacPing-${nextRelease.version}.zip"
           }
         ],
         "successComment": false,

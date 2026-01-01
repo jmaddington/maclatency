@@ -57,16 +57,16 @@ git clone https://github.com/jmaddington/maclatency.git
 cd maclatency
 
 # Build with Xcode
-xcodebuild -project MacThrottle.xcodeproj \
-  -scheme MacThrottle \
+xcodebuild -project MacPing.xcodeproj \
+  -scheme MacPing \
   -configuration Release \
   -derivedDataPath build
 
 # Run the app
-open build/Build/Products/Release/MacThrottle.app
+open build/Build/Products/Release/MacPing.app
 ```
 
-Or open `MacThrottle.xcodeproj` in Xcode and press `Cmd+R` to build and run.
+Or open `MacPing.xcodeproj` in Xcode and press `Cmd+R` to build and run.
 
 ## How It Works
 

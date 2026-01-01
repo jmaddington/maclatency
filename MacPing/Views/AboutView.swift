@@ -16,7 +16,7 @@ struct AboutView: View {
                     .cornerRadius(24)
             }
 
-            Text("MacThrottle")
+            Text("MacPing")
                 .font(.title)
                 .fontWeight(.bold)
 

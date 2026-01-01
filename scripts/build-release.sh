@@ -8,11 +8,11 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-echo "Building MacThrottle v$VERSION"
+echo "Building MacPing v$VERSION"
 
 # Clean and build
-xcodebuild -project MacThrottle.xcodeproj \
-    -scheme MacThrottle \
+xcodebuild -project MacPing.xcodeproj \
+    -scheme MacPing \
     -configuration Release \
     -derivedDataPath build \
     CODE_SIGN_IDENTITY="" \
@@ -23,7 +23,7 @@ xcodebuild -project MacThrottle.xcodeproj \
 # Create release directory
 mkdir -p release
 
-APP_PATH="build/Build/Products/Release/MacThrottle.app"
+APP_PATH="build/Build/Products/Release/MacPing.app"
 
 if [ ! -d "$APP_PATH" ]; then
     echo "Error: App not found at $APP_PATH"
@@ -32,19 +32,19 @@ fi
 
 # Create ZIP
 echo "Creating ZIP archive..."
-ditto -c -k --keepParent "$APP_PATH" "release/MacThrottle-${VERSION}.zip"
+ditto -c -k --keepParent "$APP_PATH" "release/MacPing-${VERSION}.zip"
 
 # Create DMG using create-dmg
 echo "Creating DMG..."
 create-dmg \
-    --volname "MacThrottle" \
+    --volname "MacPing" \
     --window-pos 200 120 \
     --window-size 600 400 \
     --icon-size 100 \
-    --icon "MacThrottle.app" 150 190 \
-    --hide-extension "MacThrottle.app" \
+    --icon "MacPing.app" 150 190 \
+    --hide-extension "MacPing.app" \
     --app-drop-link 450 185 \
-    "release/MacThrottle-${VERSION}.dmg" \
+    "release/MacPing-${VERSION}.dmg" \
     "$APP_PATH"
 
 echo "Release artifacts created:"

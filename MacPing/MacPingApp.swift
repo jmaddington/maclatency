@@ -1,10 +1,10 @@
-// MacThrottleApp.swift
+// MacPingApp.swift
 // AIDEV-NOTE: Main app entry point - network latency monitor
 
 import SwiftUI
 
 @main
-struct MacThrottleApp: App {
+struct MacPingApp: App {
     @State private var monitor = LatencyMonitor()
 
     var body: some Scene {
@@ -20,7 +20,7 @@ struct MacThrottleApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("About MacThrottle", id: "about") {
+        Window("About MacPing", id: "about") {
             AboutView()
         }
         .windowResizability(.contentSize)

@@ -50,8 +50,8 @@ jobs:
 
       - name: Build
         run: |
-          xcodebuild -project MacThrottle.xcodeproj \
-            -scheme MacThrottle \
+          xcodebuild -project MacPing.xcodeproj \
+            -scheme MacPing \
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \

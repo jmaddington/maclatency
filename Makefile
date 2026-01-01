@@ -1,6 +1,6 @@
 .PHONY: dev build kill open clean
 
-APP_NAME := MacThrottle
+APP_NAME := MacPing
 BUILD_DIR := .build
 APP_PATH := $(BUILD_DIR)/Build/Products/Debug/$(APP_NAME).app
 
