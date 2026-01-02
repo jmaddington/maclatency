@@ -361,7 +361,7 @@ struct MenuContentView: View {
 
             if showNotifications {
                 VStack(alignment: .leading, spacing: 4) {
-                    Toggle("On Poor (>\(Int((monitor.isEditingThresholds ? (monitor.frozenThresholds?.fair ?? monitor.thresholds.fair) : monitor.thresholds.fair)))ms)", isOn: $monitor.notifyOnPoor)
+                    Toggle("On Poor (≥\(Int(monitor.thresholds.fair))ms)", isOn: $monitor.notifyOnPoor)
                     Toggle("On Offline", isOn: $monitor.notifyOnOffline)
                     Toggle("On Recovery", isOn: $monitor.notifyOnRecovery)
                     Toggle("Sound", isOn: $monitor.notificationSound)
